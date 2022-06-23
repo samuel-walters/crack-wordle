@@ -1,7 +1,5 @@
 import random
 import csv
-import copy
-from get_combinations import possible_strings
 from wordfreq import word_frequency
 
 # A CSV file containing the words that wordle accepts (excluding the words in the answer list)
@@ -187,6 +185,8 @@ class Wordle():
                     self.remaining_letters[letter] = 1
 
     def machine_placement_guess(self):
+        # As the method name indicates, this guess is largely based off letter positioning.
+
         # A dictionary containing dictionaries that track how many times each letter appears in a certain position.
         letter_position_count = {0: {}, 1: {}, 2: {}, 3: {}, 4: {}}
         for word in self.word_lst:
@@ -210,15 +210,29 @@ class Wordle():
                 if letter in self.inside or letter in self.outside or letter in self.perfect:
                     consider = False
                     break
+                # This bool variable is basically a greedy attempt to grab as much information as 
+                # possible. It is initially set to True (see the dunder init method), but if this function
+                # fails to return a word, the function will be called again but this time with self.gain_more_info
+                # set to False.
                 if self.gain_more_info == True:
+                    # If the letter does not even appear in the letters that remain in our possible answers list,
+                    # it won't in itself reveal anything worthwhile - and as such we will skip the word.
                     if letter not in self.remaining_letters:
                         consider = False
                         break
+                    # If a word has duplicate letters, we will also try to avoid it because it does not grant
+                    # the amount of information we are after.
                     if letter in seen:
                         consider = False
                         break
+                # Increment the word's score by how many times this letter in the current iteration appears 
+                # in the same position in the words that remain in the possible answer list. For example, if
+                # the word was "bench", and the possible answer list was "bikes, boink, stare", the initial "b" for
+                # bench would grant a score of 2 because two 'B's appear in the same spot in the answer list.
                 if letter in letter_position_count[idx]:
                     count += letter_position_count[idx][letter]
+                # The score is also incremented by the number of times the letter appears in the remaining
+                # answer list.
                 if letter not in seen:
                     if letter in self.remaining_letters:
                         count += self.remaining_letters[letter]
@@ -231,12 +245,23 @@ class Wordle():
         if best_word != "":
             return best_word
         else:
+            # If a word was not found, this greedy bool variable is set to False and the function
+            # is then called again.
             if self.gain_more_info == True:
                 self.gain_more_info = False
                 return self.machine_placement_guess()
+            # If a word is still not found even without the greedy approach, then False gets returned.
             return False
 
     def machine_next_guess(self):
+        '''
+        A method that uses letter placement, but does not return the word that achieves
+        the highest count. Instead, the word that gives the median score will be used.
+        The idea is that this method gets called when there are only a few words left,
+        and so using a word that contains letters in a lot of popular places won't 
+        necessarily help us narrow down the field.
+        '''
+
         letter_position_count = {0: {}, 1: {}, 2: {}, 3: {}, 4: {}}
         for word in self.word_lst:
             for idx, letter in enumerate(word):
@@ -258,10 +283,15 @@ class Wordle():
                 if letter in self.remaining_letters:
                     count += self.remaining_letters[letter]
             word_count[word] = count 
+        # The word that achieves the median scored gets returned
         new_lst = sorted(word_count.values())
         return list(word_count.keys())[list(word_count.values()).index(new_lst[len(new_lst) // 2])]
     
     def eliminate_similar_words(self):
+        # There is often towards the end a lot of similar words with only one letter being
+        # different. This function aims to cut down the number of possible answers in such cases
+        # by focusing upon the letter that is different.
+
         dic = {0: {}, 1: {}, 2: {}, 3:{}, 4:{}}
         for string in self.word_lst:
             for j, letter in enumerate(string):
@@ -297,6 +327,10 @@ class Wordle():
         return False
 
     def word_frequency_guess(self):
+        # Gets the frequency of the word (using the word_frequency library).
+        # A human compiled the answers list, so words that are used
+        # more frequently are favoured.
+
         best_count = 0
         best_word = ""
         for word in self.word_lst:
@@ -307,6 +341,7 @@ class Wordle():
         return best_word
 
 if __name__ == "__main__":
+    # Creating an object of the Wordle class
     obj = Wordle()
     while obj.guesses < 6 and obj.win == False:
         guess = input("Guess a five letter word: ").lower()
@@ -331,9 +366,6 @@ if __name__ == "__main__":
                 a = obj.eliminate_similar_words()
                 if a != False:
                     print("To eliminate similar words, the algorithm wants you to use the word '" + str(a) + "'.")
-        #if len(obj.word_lst) <= 14 and len(obj.word_lst) > 2:
-        #    print("Please wait...")
-        #    print("Other guess that looks ahead to narrow down possibilities: " + str(obj.look_ahead_guess()))
 
     if obj.win == True:
         print("You won! The word was indeed " + str(obj.word) + "!")
