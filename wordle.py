@@ -187,8 +187,8 @@ class Wordle():
                     self.remaining_letters[letter] = 1
 
     def machine_placement_guess(self):
+        # A dictionary containing dictionaries that track how many times each letter appears in a certain position.
         letter_position_count = {0: {}, 1: {}, 2: {}, 3: {}, 4: {}}
-
         for word in self.word_lst:
             for idx, letter in enumerate(word):
                 if letter in letter_position_count[idx]:
@@ -196,6 +196,7 @@ class Wordle():
                 else:
                     letter_position_count[idx][letter] = 1
 
+        # Initialise variables
         best_count = 0
         best_word = ""
 
@@ -204,6 +205,8 @@ class Wordle():
             seen = {}
             consider = True
             for idx, letter in enumerate(word):
+                # We want to make a useful guess, and get new information. This can be done by avoiding
+                # letters used previously. 
                 if letter in self.inside or letter in self.outside or letter in self.perfect:
                     consider = False
                     break
@@ -257,57 +260,6 @@ class Wordle():
             word_count[word] = count 
         new_lst = sorted(word_count.values())
         return list(word_count.keys())[list(word_count.values()).index(new_lst[len(new_lst) // 2])]
-
-    def look_ahead_guess(self):
-        highest_score = 0
-        average_score = 0
-        best_word = ""
-        for word in self.word_lst:
-            score = 0
-            for string in possible_strings:
-                copied_obj = copy.deepcopy(self)
-                skip_iteration = False
-                for i in range(len(string)):
-                    if string[i] == "g":
-                        if copied_obj.perfect[i] != "":
-                            if copied_obj.perfect[i] == word[i]:
-                                pass
-                            else:
-                                skip_iteration = True
-                                break
-                        else:
-                            copied_obj.perfect[i] = word[i]
-                    elif string[i] == "y":
-                        if word[i] not in copied_obj.inside:
-                            if word[i] in copied_obj.outside or word[i] == copied_obj.perfect[i]:
-                                skip_iteration = True
-                                break
-                            copied_obj.inside[word[i]] = [i]
-                        else:
-                            if i not in copied_obj.inside[word[i]]:
-                                if word[i] in copied_obj.outside or word[i] == copied_obj.perfect[i]:
-                                    skip_iteration = True
-                                    break
-                                copied_obj.inside[word[i]] = copied_obj.inside[word[i]] + [i]
-                    elif string[i] == "z":
-                        if word[i] in copied_obj.inside or word[i] in copied_obj.perfect:
-                            skip_iteration = True
-                            break
-                        copied_obj.outside[word[i]] = True
-                if skip_iteration == False:
-                    copied_obj.narrow_words()
-                    new_length = len(copied_obj.word_lst)
-                    if new_length != 0:
-                        possibility = new_length / len(self.word_lst)
-                        difference = len(self.word_lst) - new_length
-                        score += (possibility * difference)
-    
-            average_score = score / len(possible_strings)
-            if average_score >= highest_score:
-                highest_score = average_score
-                best_word = word
-
-        return best_word
     
     def eliminate_similar_words(self):
         dic = {0: {}, 1: {}, 2: {}, 3:{}, 4:{}}
